@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Non-Conformités Maupu</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png" sizes="180x180">
+<meta name="theme-color" content="#3d4750">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Non-Conformités">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --red:#c0272d;
+    --red-dark:#9c1f24;
+    --steel:#3d4750;
+    --steel-light:#eef1f3;
+    --steel-mid:#c7ced3;
+    --bg:#f4f5f6;
+    --card:#ffffff;
+    --text:#2a2f34;
+    --text-mute:#6b747c;
+    --ok:#2e8b57;
+    --ok-bg:#e7f4ec;
+    --warn:#c98a12;
+    --warn-bg:#fbf1dc;
+    --orange:#e8730a;
+    --orange-dark:#b85c08;
+    --orange-bg:#fdead9;
+    --info:#3d6b96;
+    --info-bg:#e4eef6;
+    --crit-bg:#fce6e6;
+    --line:#e2e5e8;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Barlow',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.brand,.card-title{font-family:'Barlow Condensed',system-ui,sans-serif;}
+  .screen{display:none;min-height:100vh;flex-direction:column;padding-bottom:90px;}
+  .screen.active{display:flex;}
+  .fade{animation:fadeIn .18s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Header */
+  header.app-header{
+    background:linear-gradient(135deg,var(--steel) 0%,#2c343b 100%);
+    color:#fff;padding:16px 18px 14px;
+    position:sticky;top:0;z-index:10;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
+  .header-row{display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-logo-wrap{
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .brand-logo{height:40px;width:auto;display:block;}
+  .brand-text h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.3px;}
+  .brand-text span{font-size:11px;color:#cfd6db;text-transform:uppercase;letter-spacing:.8px;}
+  .icon-btn{
+    background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;
+    border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-size:16px;transition:transform .1s ease, background .15s ease;
+  }
+  .icon-btn:active{transform:scale(.92);background:rgba(255,255,255,.22);}
+
+  .conn-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.14);}
+  .conn-badge.online{color:#c9f5d9;}
+  .conn-badge.offline{color:#ffd0d0;}
+  .role-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.14);color:#dbe4ea;}
+
+  /* Ecran de connexion */
+  .login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,var(--steel) 0%,var(--red-dark) 100%);}
+  .login-card{background:#fff;border-radius:16px;padding:32px 26px;max-width:360px;width:100%;box-shadow:0 12px 30px rgba(0,0,0,.25);text-align:center;}
+  .login-card .login-logo{height:44px;margin-bottom:10px;}
+  .login-card h1{font-size:22px;color:var(--text);margin:4px 0 2px;}
+  .login-card .login-sub{font-size:12px;color:var(--text-mute);margin-bottom:22px;text-transform:uppercase;letter-spacing:.6px;}
+  .login-card .field{text-align:left;margin-bottom:14px;}
+  .login-error{color:var(--red-dark);font-size:12.5px;margin:-4px 0 14px;text-align:left;}
+
+  /* Photos */
+  .photo-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .photo-thumb{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+  .photo-thumb img,.photo-thumb video{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+  .photo-thumb .photo-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.18);color:#fff;font-size:22px;pointer-events:none;}
+  .photo-thumb .photo-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;cursor:pointer;padding:0;}
+  .photo-hint{font-size:11.5px;color:var(--text-mute);margin-top:6px;}
+  .photo-upload-btn{display:inline-flex;align-items:center;gap:6px;background:var(--steel-light);color:var(--text);border:1.5px dashed var(--steel-mid);border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .photo-upload-btn:active{background:var(--steel-mid);}
+  .conn-badge.syncing{color:#ffe6b8;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-top:14px;background:rgba(255,255,255,.1);padding:4px;border-radius:10px;}
+  .tab{flex:1;text-align:center;padding:9px 4px;border-radius:8px;font-size:14px;font-weight:600;
+    color:#dfe4e7;cursor:pointer;transition:all .15s ease;}
+  .tab.active{background:#fff;color:var(--steel);box-shadow:0 1px 3px rgba(0,0,0,.2);}
+
+  /* Search + filters */
+  .toolbar{padding:14px 16px 6px;}
+  .search-row{display:flex;gap:8px;align-items:center;}
+  .search-row .search-wrap{flex:1;}
+  .date-filter-btn{
+    flex-shrink:0;width:42px;height:42px;border-radius:10px;border:1px solid var(--line);
+    background:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:transform .1s ease, background .15s ease;
+  }
+  .date-filter-btn:active{transform:scale(.94);}
+  .date-filter-btn.active{background:var(--red);border-color:var(--red);filter:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
+  .date-filter-panel{
+    background:#fff;border-radius:var(--radius);padding:13px 14px;margin-top:10px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .date-filter-panel .field-row{margin-bottom:10px;}
+  .date-filter-reset{
+    background:none;border:none;color:var(--red-dark);font-size:13px;font-weight:700;
+    cursor:pointer;padding:0;
+  }
+  .search-wrap{position:relative;}
+  .search-wrap input{
+    width:100%;padding:11px 14px 11px 38px;border:1px solid var(--line);border-radius:10px;
+    font-family:inherit;font-size:14px;background:#fff;
+  }
+  .search-wrap input:focus{outline:none;border-color:var(--red);}
+  .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-mute);font-size:14px;}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 4px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;padding:7px 14px;border-radius:999px;background:#fff;border:1px solid var(--line);
+    font-size:13px;font-weight:600;color:var(--text-mute);cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .chip.active{background:var(--steel);border-color:var(--steel);color:#fff;}
+  .chip:active{transform:scale(.96);}
+
+  /* List */
+  .list{padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px;flex:1;}
+  .nc-card{
+    background:var(--card);border-radius:var(--radius);padding:13px 14px;
+    border-left:4px solid var(--steel-mid);box-shadow:0 1px 3px rgba(0,0,0,.06);
+    cursor:pointer;transition:transform .1s ease, box-shadow .15s ease;
+  }
+  .nc-card:active{transform:scale(.985);}
+  .nc-card.grav-critique{border-left-color:var(--red);}
+  .nc-card.grav-majeure{border-left-color:var(--warn);}
+  .nc-card.grav-mineure{border-left-color:var(--steel-mid);}
+  .nc-card.statut-cloturee{border-left-color:var(--ok);background:#fafffb;}
+  .nc-card.statut-encours{border-left-color:var(--orange);}
+  .nc-card.statut-ouverte{border-left-color:var(--red);}
+  .nc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .nc-ref{font-size:15px;font-weight:700;color:var(--text);}
+  .nc-type-tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .card-del-btn{background:none;border:none;color:var(--text-mute);font-size:14px;cursor:pointer;padding:2px 4px;margin-left:6px;line-height:1;border-radius:6px;}
+  .card-del-btn:active{color:var(--red-dark);background:var(--crit-bg);}
+  .badge-ouverte{background:var(--crit-bg);color:var(--red-dark);}
+  .badge-encours{background:var(--orange-bg);color:var(--orange-dark);}
+  .badge-cloturee{background:var(--ok-bg);color:var(--ok);}
+  .nc-desc{font-size:13.5px;color:var(--text-mute);margin-top:5px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .nc-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px;font-size:12px;color:var(--text-mute);}
+  .nc-meta span{display:flex;align-items:center;gap:4px;}
+  .grav-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:8px;display:inline-block;}
+  .grav-pill.grav-critique{background:var(--crit-bg);color:var(--red-dark);}
+  .grav-pill.grav-majeure{background:var(--warn-bg);color:var(--warn);}
+  .grav-pill.grav-mineure{background:var(--steel-light);color:var(--steel);}
+  .sous-statut-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:8px;margin-left:6px;display:inline-block;background:var(--info-bg);color:var(--info);}
+  .pending-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:8px;margin-left:6px;display:inline-block;background:#fff3d6;color:#9a6b00;}
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-mute);}
+  .empty-state .e-icon{font-size:40px;margin-bottom:10px;}
+
+  /* Floating add button */
+  .fab{
+    position:fixed;bottom:24px;right:20px;width:56px;height:56px;border-radius:50%;
+    background:var(--red);color:#fff;border:none;font-size:26px;display:flex;align-items:center;
+    justify-content:center;box-shadow:0 4px 14px rgba(192,39,45,.45), inset 0 -3px 0 rgba(0,0,0,.2);
+    cursor:pointer;z-index:20;transition:transform .1s ease;
+  }
+  .fab:active{transform:scale(.9);}
+  #global-fab.hidden{display:none;}
+
+  /* Fiche / Form screens */
+  .sub-header{
+    background:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;
+  }
+  .back-btn{background:var(--steel-light);border:none;width:34px;height:34px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--steel);}
+  .sub-header h2{margin:0;font-size:18px;flex:1;}
+  .sub-header .sub-ref{font-size:12px;color:var(--text-mute);display:block;margin-top:1px;font-family:'Barlow';}
+
+  .form-body,.fiche-body{padding:16px;display:flex;flex-direction:column;gap:16px;}
+  .section{background:#fff;border-radius:var(--radius);padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .section h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-mute);font-family:'Barlow';font-weight:700;}
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text-mute);margin-bottom:5px;}
+  .field input[type=text],.field input[type=date],.field input[type=email],.field input[type=password],.field select,.field textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+    font-family:inherit;font-size:14.5px;background:#fbfbfc;color:var(--text);
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--red);background:#fff;}
+  .field textarea{resize:vertical;min-height:70px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .readonly-text{font-size:14.5px;color:var(--text);line-height:1.45;white-space:pre-wrap;}
+  .trace-line{font-size:12px;color:var(--text-mute);margin-top:-4px;}
+
+  .type-toggle{display:flex;gap:8px;}
+  .type-toggle button{
+    flex:1;padding:11px 6px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--text-mute);cursor:pointer;
+  }
+  .type-toggle button.active{border-color:var(--red);color:var(--red-dark);background:#fff5f5;}
+
+  .status-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .status-pill-btn{
+    padding:9px 13px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--text-mute);cursor:pointer;flex:1;min-width:110px;text-align:center;
+  }
+  .status-pill-btn.active.st-ouverte{border-color:var(--red);color:var(--red-dark);background:#fff5f5;}
+  .status-pill-btn.active.st-encours{border-color:var(--orange);color:var(--orange-dark);background:#fff4ea;}
+  .status-pill-btn.active.st-cloturee{border-color:var(--ok);color:var(--ok);background:#f0fbf3;}
+
+  .photo-zone{
+    border:1.5px dashed var(--steel-mid);border-radius:10px;padding:22px 12px;
+    text-align:center;color:var(--text-mute);font-size:13px;
+  }
+  .photo-zone .p-icon{font-size:24px;display:block;margin-bottom:6px;}
+
+  footer.actions{
+    position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    padding:12px 16px;display:flex;gap:10px;z-index:15;box-shadow:0 -2px 10px rgba(0,0,0,.05);
+  }
+  .btn{
+    flex:1;padding:13px;border-radius:10px;border:none;font-family:inherit;font-weight:700;
+    font-size:14.5px;cursor:pointer;transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--red);color:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);}
+  .btn-primary:disabled{background:#d9b3b4;box-shadow:none;cursor:not-allowed;}
+  .btn-secondary{background:var(--steel-light);color:var(--steel);}
+  .btn-ghost{background:#fff;color:var(--red-dark);border:1.5px solid var(--crit-bg);}
+  .btn-close{background:var(--ok);color:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);}
+  .btn-close:disabled{background:#b9ddc4;box-shadow:none;cursor:not-allowed;}
+  #fiche-body input:disabled, #fiche-body select:disabled, #fiche-body textarea:disabled{background:#f1f2f3;color:#8a929a;cursor:not-allowed;}
+  .status-pill-btn:disabled{opacity:.55;cursor:not-allowed;}
+
+  .note-banner{
+    background:#fff8e1;border:1px solid #f0dca0;color:#8a6d1f;font-size:12.5px;
+    padding:10px 12px;border-radius:9px;line-height:1.4;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ECRAN LISTE ============ -->
+<!-- ============ ECRAN CONNEXION ============ -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-card">
+      <img src="data:image/png;base64,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" alt="Maupu" class="login-logo">
+      <h1>Non-Conformités</h1>
+      <p class="login-sub">Bennes MAUPU SAS</p>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="login-email" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){ event.preventDefault(); doLogin(); }">
+      </div>
+      <div class="login-error" id="login-error" style="display:none;"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;" onclick="doLogin()">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-list" class="screen">
+  <header class="app-header">
+    <div class="header-row">
+      <div class="brand">
+        <div class="brand-logo-wrap">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAD/CAMAAAAaPliRAAAAkFBMVEUXUp7mIDD//v7k4+zzExqaME9NY52arM/////+/v5thrgIVaVjQ3TsXGEQVaLzn54QVaLlIjLlIjL+AFW2Izpuk8W3xN8Afn4AAP94PGboOUSqAFUAPr2+JD0AO38Afv1/AAD3wrv3vcHvgnwA///ve4P/amoSPov/nZ2/f3+DQGWAlL8AAADNEyb+/v4rVZmT1ZR9AAAAMHRSTlP8+wjtDfX3+WSq9xL6+J70X6NfA/n+/AIB+/gDBAMDAgLz/fsB+QL4BgTu+QD+/f7D8WcKAAAo8UlEQVR42u2da2PiOLKGjY0FBvoygQBJgKR7emb3nEPi///vjnW1ZKtKki0IJtaH3e5pMLL8uOpVqVRKznff9vvdbreU7fQKfU5+4qfevvs14zvyQlB/Tif5iapj+/19jnpypyxVNL1WFB2WOwdAHIzkUk3nDuJtuTycKGT7e4LsnsCiLFFjsLeCJChKbqBJ1Fi/DmZvd4fqHl53I1ifTxN74XdtlqQ9Sm68CZPG+vxq3hm9sf0I1pWNE30Or9qwv3KYhsCSy5hR+aXd2CsXZPsRrMvxxJWTaZwi+ziyqNojbzO0bes/is/Tr5JojDUR20stNoIV0eEddNnLXV0vnAghgpztdpuJ9hGryQtW1+bYLQjphZgh++lo3LgBu3GwdnRit2+Zp04cMYwkRB+f0wRsjLVw0/ZdEKYs9v52AbtRsPavhqjoZJ+EQdp+IkdeoHHMggyaAEyOz656/5a7ESxcRNEgpvzrHw5UKEzb2yXJgdmWuU0SBpgcrRMLue5HsFphg3qMgoAiC0pTH8PEPNTv379/qPbNbM9Qa3yuvkB1tR4+lxsyX2/Z4Iu6x/0IVuX2Toed6fM8rRP3c11UNXv2fytoJpdrij32k+FTBIEY8XeQYigPh+X+i4K1351OkqiDN1GLMF/HnuQvZYMmN9EUar8COPMlrOJL4bV/PXyS+PocsJjb28mZzdKHqEo9+fMkTNLtkIQbtaqb/3B7Fg8wZr604MzuzsFiKzAhQsobKOHgqGubDLdRzyl8pvuOt04VpuN1uGrw/opg0aCLjpTb5bmB4nqJiqX+NP1F24Nq0/BWf5ldK4Ih80Cs+neXAWPOUQbvr2S7kttDykNDMZy+dcWpJqhm4kJ33mCuI29ckOGEMQe5QPGqp467ywv7C4NFA53C/jodH5/lObXTP8HCyeAI6Oi61V54g6zTm/4X8dn2RRDcJGiBhDHBj/OFma/aeFFRshsiWH92am7ikufM66FAcfEUzJLVGnEU1uvj9Fg9+otbLEog/R3+Y2/27gRSxoUYylclv3DjJWdOr5cRXhcBi74Mex/PRxY0sIkMz+8QNa7B1Hx2leE5Hl8uSFCwg3w5Hmm37JD5IvbMXWQ3vGpdfwlVn0T3fQc/M4VKcyGhnoNoMp5QZRyO0hzd9jo772NlP5u3IBnz9JDgaFK8CEyXdCuRVxsjgrVfinDnK8oUwZASRPnwxHHSfv+NovQinM95kG1au+mp8V+9CEP5otrLqbv+LKOJ+iQSUzKrljIFW6nHWYbIKA+iBE9rjSb6HCqe3gbKEsbYmr8oJmFON4nghRgvStdeBK9f9zcA1p6mbDiZquQ5+CpRYf7s4e/ou6yN8XFKR/38BVr10lTaPxCwZzZ/tI84qLyU7Oqf5tULrEpQue3UAvJ8NBjl0lECKH1IvwpOdjO2tlgw1Hr9bbdeWbaF6eKOcd8r2NUZrN1h6dLoBDJTXEk9+wMlePq6RLUnlet6MF5cfIHOsRJeBNf0y9Of64GlImuwoYKZokg5iaond02ZMTYDsBc9Cuvgq8LL6hsh3SX94v61y3wxEKy9jHqeQKYWgEJ3IGXaKDr/Xo88+WqwF22wcLyo9AqgS8EVHOpKgqA64IaK2Jlinu8ZQ2qq2/URqM4W7KjhNYXxAuiqHOMC8ItC0e/jg7XjSZ4nSFEBvg/X500jNfq8OAJf8YXhRaP27UdGAxIAXCcOwD4aWPvlaY8aKvtKH+r6dCU15RHyEYnI+qsaVvkX2Dl++8diu6oZI0EUvVcUNXFHPrn7s0O1AJl6dotzeu8vI1GXtV7rl6mmvQI8oz1SL9zi0glX4tZUgKWyCyqcKWWYpsfjSNT1+FobvhGiy+IYbXBJQY+nDEJg7U9LDCqbocKYqpFaj+L8BvCy08VklydcSwFXCFg4VDaVnv2C9JTu+Y6jOr8F6aXR9Zc93NV6wBBc1GTtDzsfsPY8+LmzQmX1fhnGlLBSo5a6sbhX9UBwutqqC4ILkPOJGVI/gULdBhV1fqDrOwr7O4qpG8XrRT4ZwDN6wiXYapaIS2qpDit18tiSVDRA9YzLqdrqju2WXSM2Z2yLriyzRFEFXAct3yYRquoVMlU2qH78/Q1iSsqpUU0NCa4jZroscG1nNrYoVbvTXoElo16WkLoNKquiUnrqrVLobyNTA6TrRaxmW02XBS6bV2Qo7VnOZ8IK9NpMVVtT/bJ6P8rUWkbjRqSGLbsqqwCarmcLXAu7U/yz3CVWqlpQUUmFOT9qqMYHcyfhLv4o/eDKto92tpKf7eBnI4xh1+nK+Y0a/Z41vc0t/t2Ey2K4lg5RZbdUylCNUfR7hksYjEp0WUIRDsP13TRVLaFuXfCTQc8Rqi8Al/CLljhqCy49zfk7pKps7q/2fseXkakv095guJox1Hqq+N3mAO1QCfs0qvSvqeinkOZqGC7hFL83HaBNVEmopmM+3giXDa5mlIs5xQw3VRKqf0dFNTYWRp3aQxFNtmqwfrVMlbJUY+BzbK3Zoo2tXwqsgoPVNlVy9tcutTO2sZ1f2OrisQWXCqBSsDKbqZKaahzDsQGW60UG6G1OsUiaVEmoxjSqsTnZegO8YuUUEwtVo6YaW4Dh4nK+wdZfiQ7VUZtUjm1s3nAxxfWmwyXBEg5wjH6OrbOcN5wiA+svJqf++9+0fzN/LI3Uxsc2kDjES63mE26q1uO4jC1Ce+NpqNOHh4TJr3/P6TxGS8+adUkjXZRedmzDMVx8U3/CVFV6nkc5IrQBVhHp5FHjsmMbgpoXu3RGsMYWuY1gjW0Ea2xDBSvr2kSmoA2srEezXXZswwMrSzo3AoI1+08S9bJjGyBYZecGg7VNyqiXHdsIVm+wRos1gjWCNTY3WCT3bf/rDZb/Nas2usI7tVj55N2rTVZOsGZJ4DWrq+ajxbqzWWFZzcQYJ54IMAKqrySoxQq75vv7hlNVfW0xgnUncaztbMGe6sYPgaeEmpVZlsFxLHbRkGsKXEl9XPQI1tDB+lC+K/dDgHlCj8h7yDUrXOlVszHyfmdgZaFgZZHBosJN+FbeoRGsLwdWTl3hzA3WIglwhU2wRos1YLDSosg6gLUpDQYaYClasyDxboKVFcWI1VDB4iCkaREK1juhZDEki3Z6Ov0PtSd86gDWHM14j5RHHycLP/2Uhj3bOFfreJVEfV0POviDRSdwwhdau8WNFgnS7hpYKTd9FyBLv8o5xtP8HK5QvuJQ2g8sfoFwsDRfOG/1TNnAsDCWDta4R8er3d4wJeeWKAoCi80LhS88W8DqEGwwLRY4YEwXdm/yyt0u0+xXz870aXMpF0y2OvVo3hzuComOg9MbLOYLgQC5TPVjgff3+GDFyEqt/j8L/nJmAevjE1tWsJ1Mut3qlBQ8B55gh6uEgGUPF5QqlFUAo80M1moE68JwUbZqtD4RrFCLNcmty8hPSr43hzvtJN1HsDq3ypWpqc6gwFqBvpDY+pXyR8au5y/dR7B6mi2huIYDVoXQBgpl2XyhvLVFoMEKBGsR2mZWsGYh3wbBCrrKon+bzZqHKFOrlWoP0/dKGQaW71UeO4KV5I5lHesunRKQ7k9RwArfAFJawVqEbO8AwSr9LvIfNlxJnEYTQXS6Cma0QvfHoGBtfbuSdQRrBWZPtX2hId2f2upsQ+KA1TOLugYr4NsgWMQz5ZqBVcZq9JGSreYPmYgPyzZ3gOU5OB3BAtaR61BWZsx3i3qsN7ZvfRJYSR+wklsEi8OlVewvzIfp8/VPBuvJEcqqeyYf2BaKNZRJXLB8fIaPxcK/7AuW4yoGWL3cYPV1dZ1SoUXdoQmWY1A8wcIv0gMs8u4r312xhqckLlgecbInH4tFkNV2f1e4QlJjW2A9vXduk02eP60UXBVa9bzVdIVPeI88XWGOpOX1Ast+5aeyLd9dsYYylsUi4oVxb9UgwmXA4p3+uzVYN8kT8b46wJLvbw4/APqRmVT6ZdiihK1rVX/zJ6IsaibJqsU78iNE9sgt3uHXblPqg9MNrJVrJVo+rxSPNeSxwKLHqnuucbNBnDXS8yVYGT2eHTY2DImFTO4HwaL5/SyTKId7sJBdkB8OisUAQ/aer6TR2sq4gxwe5Ec25u4CMI4lB8f++oo9Clt9aEPB8pDvqU+sgUQDS3TYwxUaedTWACkpMW9P/AKk9J6TJ2j5S4hR2ZiT8d8YhyaarHQ/qzc4CSA3P48GSGdgFnCuHn8PsHKvlWhXhh/7QiywfJMnjFG8EbCyeGBVN0jsZA0CLD/57oo1kJhgEc+EeiOP+h7BkvOTJllXBmveCSwv+e7Ka+D7XHuDNc+Uu/VKntB8oZmPlQWBldnzseQuyM8ESzyjBll+YGWZPR9L3pcfWNVVulksL/nuijWsIoBVr/J5P5u8tC8+Kc/tA9YcTNaUGbgeYGXmBoN4YL1viEZWkRa+YBVYanLmC1ahLhIOlo98d8QaxBb6vmCJiSfxnrHri0/6GgFNZPIGK23mamrJwak3WHI7QHSwBFnCMPMh8gLrDN1X9T+FL1hsMSntCJZTvqeuvIanOGBpE8+WGd3kuC80X9AQi4VuOgixWBcCS0SViPDa17VY9a6qDmARdyJp6ow1xBPvVk84yUmIL0yDLFbqXgvwAOtSFkvU6tFllp/FQkY6C7BY3V2hW75rsYYkB6/TF6xU03EW27SB8E/aE6C7AksOcDY4sNzyXTNYG3BlqbfFKuDo6AYYyJWxv/ZeweLRnMXgwHLJ9wKPNWzKGGDpnrBtFoH18gmwp+jewNqYJmswYLnke+bIa4gClu4JNzbKc1wKzu8YLP6WzwYHliv6/oEnYkWyWLgnBBJF2Ihv20mJdwYWN1mDA8sp3xGDpeqL9gPLnBO2egpuDLL7wkGCNZn4mqxBgEV85DuWiLWKBJbLEwJDSWy+8BbB2qwc7SnPHYsMZEBgJTP79N6U70hwlONH/7UnWC5PCOBv7K+9ZbByZ5I7vcUcTT7LBgTW1tHLhVZqrQQf7KwnWGh0VD0Th11N9QT927NYnrsoALT0WovDsFiZl3wHS63xaVl/sLB1whVWWd6eoH+rYLn3hiTk3fWWDwMspBSDJt+hRCz2IpGP3mClyDqhmnfafOHEVmviZsEiSFMp82CPpcgaCFhw8ZjazYCfIXy63xMsxzphiUVyLQn6NwtWO8tYT+WiGfNsj8fKkXw2ELAy4o6+E3gPBXtAfcFKnZ6QJAG+cJBgiT1KJbhvXU2lBgIWuLhcO3Y01qAu0cdiOeaECQGl4KSWtZmWRjpMsMTsm+CZHEMBK3Mmz4AFZuSKSj+w0OjoRJeCnr7wpsEqrBVk5/MCz/jfDA8st3yHJvtqqtITLKcnrG4TLgHeLpt622CBDxzPzK6nhYMBi2GByHfwmaqq8H0tFuIJ34VBgu1qu+7SAC0Wq8WN/lw9LRwMWB8JKt/BGVmucs57geVYJ5S9BP1xu4T4jVssfPWhhCfggwML3hiTJ0gMaWVcoDtYjtxRcZfwBumWLxwoWHwcCDxRGhxYLvkOLxOKiX5Pi+XhCbHtO63U96FaLAysyRDBQuT7Ck7Zyk052RUsVXwU94TYeDbnhXdpsYboCpHou9iKm2PSvS9Y3BMmJeoJnb6Qp/sN32Ldk8bCou8Ek+766lVHsOQe4i3oCdVeeLCTzXS/AYLFZoWZ+rmJHazF0MBy9NUh3fuB5esJsTkGUZm789sHCzxiq8BuclMOEixH8gwu3XuCxT2hvQNq6TVDO6mnOKTpIAOkqQi9Q5H3AS7pOOR77ly76ukKlSe0PD7pCbMULXDU8IU3DVY2b7eiKHSrTKAw8HZ4YGHJM6B0V5t4uoOFesJJXr/mBXqyq5niMNxF6Bk4VVqVg8tu+EAmZfyWHNK9H1j1nDCBPeGcTcV9lnWyenVkaGBlWwKXnCWDy8dyb/1wSfd+YDmio8IT8voRXss65xsGK4PabPa4KEUKqe1pT8rBZZB2Opl+Uxq1FjuD5TknLASA4K5Z0xcObzOFnvWeW7POyqFtpnDtSLW3xm7W7mCJslIEnBOyO1SyCV7WMVMchrtLh2ze8fXQwYEVdHAqaRfW6WixfNYJ66qCMz9fOFiwCPRm6x5iYGDBgW2XdO8OlqcnrOug+qY4DG/DKqMqf58gAz4bHFhF6OH02uJc1g+sOaLvTE94Dghl3WLthtzRNi4PkWSDA2tehMl3vaps0QssLR33CfWE0muiKQ6qut+9VZtpB3cGAlbgKeJPmlLuA1aAJ5S341jW2crdOvcFFhlcfSwBVhom3/XKt1kvsFzrhMoTqt0GXr4wvSuwJg1JOyCwxEkYnoeiGSdl9gBLLwyNrBPKKvb8fjyXde4JrE1pmb8PBKw0RL4T7XSBXmD5rROauwURX6gv69wTWMQyBx8MWAHyPTdOI+8FlmtOWGbGYZzMsPrt1rkjsFZaglI2NLDOAfJ9pe9d6OcKvTxh4/hgfFnHKPR8D2BNWPFgeZjOfHAWK0C+G4dW9ADLd06YmmWvMq9lnexewGLnycjKWAGHNN0KWNrSiiP6zh5ffcxOH7D8oqN6Aq+3L7wXsFaJJrDm5wGC5S3fiXmubw+wuFnZWqd5CpKiVb/dZ1knuw+wxKFy4sTx4jxAi6WbLOIZBGY/2xms+qR4lyfUm28o6y40Vm6cZJ/JhzQssFJP+b4yTm/qBVbh4wkbCXH1sSgTd9LFsMHKeT6p5Ir1dIgWS1u2WzmCdVpGXR9XqK0TTqB1QmsKr8duHQdYKy+w5p8IljhpvLbAtVsZmMYS0fcEj76zLz3KR9IDLMMTblwpPWbDfSExwFrBsaEAsOysXAasCT33U2JVzrQjv8WPwGBtAsCicyAyuQJYqZd8J8ahpr3AKnyio/a9LHYr1/KFFEACLqOX9pPeu4BVnKOBNcnzFS9ySxOWpRuUG3HrebQLLOx0mRosWNpFA8soiU08pXt3sFKnJ8SKV/sUYcPA4lHHzAVWEWIf+h55whvdSK/y4Im6Ez3Bw9OGuo4tgt+6VWSwfKLvK7NiUC+wYK8mKnA7iu3neKaYjHi9dxUjuhbpD1ZehjUdq0xVKtRU36TjpERuMyhxnZCZF+kFljv6ztfZ6xpnfcByekJXcxQkdevTGfpqS23goHPra7HCqCoXW+X5i7oatEozAqYTq9oSp12OLQKfVw+wfOR73og1dAZL94Ttjb+byh0kjlZ9xNFDDCxt1gkd9y6HD55a1mDNY4HFb40sZrW+zObnZv160NgwF1+z7jrE3l6EXSuYFAssp3xvFuvvDhZ6oOpm9eRWI08r8Pxx93YWzdzzqAn4AOA3uzF76gtWxVPl/iqmZsakpUjPqf8ZQa3ihoEH+F0ELId7skTd+1gs1B5PvBqsArfaqbD5u0Plz21kyZgRvDIp1odDwEJ2Qmvx3wZW0GIFkiHwAfp4Fa9E5mh1waSsvkJPsBzy3Tgotw9Yemwj8d0k678Moh+GB6jcjbG2ezb8IY+jzJ0bxM37inMyRRurtB0pQFy8Nrvi3zbvS4alkVpj9olNT7A8zqsnH0Z54o5gue1xr3xLGcpC5iF68YkilTypImhpoU0sn949XEZssLJ5AyufCAiffCbaFc5GcTehQMT5kxvYmG9jgmX4wtIeVWxW6u8KlmNm0jOBST5BOFYjpv/S9xRz482W54+geUQbPfAeGayCTepSoITKFgnDrvRloMyYG9a3xd9o7JVrxvj6gsVN1qPdQxlR93MPsNKwHPvAVBPNyS0Qi0j0BV46TkVR8BpombkqCT0Aw2XEAiuruiGPQUjx5csJYrK0H+L3ZdwWH3hsYEhcsFT03ZY8MzE25/QEa+4SoXF8IUbupmyQZVvtxlZOjUlhAFjgmSfKD0uZB0fNkdWRVelEmL1vQCTMiMTEAwuT7ytjR2gPsNJLekKj4g//hQmcCqut8gLl9WCTSvRJYQhYZ7SlKRRZa2Rzb7B+IW9MhpR3a8SO6370BgtOnrEfZdoJLPRo8Si+UIaysFebh6mrrm2twz8jCcrVxqh7Gs1ipTh2TvWuTp8uZ1a0skWJcsWVdNaMsfYES0XfLfL9yRJ76wrWHD/DpGfTUiMWqIpbqVW5RgQp2y5kHTTwy83qlAEWywUPYs7OroW+elkyKUmTrWwmEyfI5t3HEEcECzQmpfW4+A5gpZqSS1bxuZo0KlcjgbK8XpujIe8tbbPZgpRoeb3m5Kk4B4UbIoDlUKcbItNueChf3haR6/fIsG8ahzFEAguOvmubc/QNWV3AMrZ9tR9CHtDAhUDhC11bcGVCXSOVQv7H1cZn8jm/Jlh+8+kcvS3kmxNjP3lUsAD5bmzOOfcDa45VisiTgCyAlWtZZ+GKaNRotdoqd0X49QSiq4B19t30slkFpoVAy8HxwLJH33OLdO8MFnZ4zjsJyS8hrmUdjy24ufUZkCf3LrhSTyC6Fli+e9Y39vta5b4rYmlUsMytq7h07wYWvgE6LG8JWZ+X8t2rACZLB+aOg0G1yl1h2+aLdjWw/PesTyhbLNtWuEGyWlXaYeJ8X1TBl8hgWb14abWQ3cCaI5EAnjyaeLUSzTtwnpjX/OWN1G0+ARDSCOpdCywza85n1ULdls+arN0xRQHL7sXNqma9wNK+YnvgzH7PvFqJZ0pp8t1/3cgzqmZJILoaWIFV8oJXLaz5XFHAsnjx9jJhV7A8PCG4odB3F1h7WYdEfgBlPT1IrwyWvukl9kKr9r40ehkFLC13dYVbyE5gYaVAHBsKLbvAcueyDn8CUQP8q9YDuBpY6sW/wAuz0d+XNDZYtuj7CrCQnTQWVijZsaHQd0e0sawzS8rIWV95vadEPoDrgSWLqaCpL7Hel8hgNeX7xi7dO4KFLaOGeELUF+qAksjv9kbb+l6YqYtXAUsmtyaRTbGeotZctIwBVnvranNzTi+wfD1hgTbHgs2kmaEcc/GItA3WNcE6G+n45SZqbRs5+M0+xgGrKd9JaVvw7qixCqQ8pLEA517kxxZstBRd4QzziA5DKpFmwtGVwEq1I+LJJqYdFt6ilWURCSxzRgsGNzqAhc8J3/X6tHhz5SWtkubBxJHIetJe7Ho57ZpgKZOVJWU0Jy8C0xlQ0CIx0sX8DxAwM4Ea0fdVaV2XrCuh+YMl9xO6PWGKDb+j8kMj8qZy2/Jo9op8NHd2pyH5WH3BSvW9NpXN6u0NJyKJa/sB9DAx/hZQNRncXV5pmNbmHL2FWizsaPFGKopnXhJxLeapmAO+/BrO1bzezRaWQZqmaRRnKMjqPeWVxTJmH9BLndQv0Fykz3uAldFdBCkQfV9BZiRlWw+CjpXLisLlCSXC+NhLy7fAN0I1DpDtOzufNGqCan3Udwtc3GLVMliS1dMWm1zZCvAkJtBB5xVCyTOlURKr6eeDwNK75IiOzh2uUNvrvHIlTGkbI3o9ArMmqLbnqJAZqJ67dKo3uXfMoTDIWr13d4cixUbtsrR1LTF57gyWvobe3pzTFywIh7qkhROsOY6o6VfFRxNX8p4DK2Llyhht7+1f/aOkaWaQ1f2NkZnMNVeXA8vcutranNMC69EFVkla249yQBZ9hIDl9IWL1u6USmltur/WRk3Qc3ew5hFiDpIsmcae93ldyu0HpkHaYGULFCxtl5Ateeb/RJ8/oCQImaKPgMUn6LPMuRSzsT43HCxsC1lpmqz65Q5HSybNmTVB22BtrwaWRpZ6Y8LRUrVOJQdQiUkDrGy2IAmy55KPVEIWszZYuhgFlgn5BxZEbPxYOUK6JeE/xDG0oZ7LgizeYGXZDJkX8jdnq+3A2SrRuMr92VKlZstGTdBmZ7bgrck40Uz2pj9YGlnVG6NemTz8bdFeF7B0qQmW2pTxZJ9jqr0cGZ48Y18mlCF06eMn+BoI2zNCo8UJkOyucvxm3mCJ3TQESW6hu7uMTaiJ2hyVu/IpWf1iVWpW39xqWnfVmQQ58VGmqHrcnj9ZRdPNs/TXzbvPfWlFKTMXVw2w1G9tsAduLfOqR99bm3OahU9cE3m1y2qh+pS7VKQfWHh4SlyQ2DZsqsx2brrqglvqD5v8aUX0wmjKm2e2M4E+Snwk1CBEA0sn62NGtF04ZNW6L/WHTW7cV6Jt2IW5AsBytgxMnsnMk3NgsLw21SzE+hb+qWCwHNcj9VF/Ei2z12S1enrSNpU9Pa1WpFnCsRaJhfXYxQ/fQYgH1lmV8WqhZbuv9m1Ru73VdR/YqZhgqeg7sEw4MLDSubF9vvEQjL+2/40Ys2f4ZOsrg1VX6KtfmaTxQgB/4dJEm1LpNSkvCVYdfbcv3g0HrLo+ddbYbN6ky15s1ig1axn/zwSLGYC5URvA5754CV1jA37zdXGJd7+WYckzpXXxToEV0ggNgDtbkHj3+lW+AF49gswoRTUTTyGB6hczqIzvWMY/rDOxwWJbhAqz8MSMgHSJssykmp5CJXQ9wFr4tgxLnllYFyYlWGQR0Gb0cq5G/MMNXj9KNItrosXpYkUN9D1nzH1WSG2bxWYZVmmvznjdXrA7bKDF6Wrel7ytBlOtErpusALb3I5O1txXb4m8X6B5Bkj9WyqKu87t1X3Q4sWifOPZOv6dRjsiWABavveVFen57FwXjwtWigzEEMESjyAtsuBvs+HHK6d/HljivuYdnkgx98EqMlippnbT+wBLDGIgW5m91OwNgSXvax5yX1khyip7XD45TqOBpV+mOKfn+wBLZdmlMpnMNfjzVPtWLLCK2GDJHqZ+cGWihK5fyuF6XVms6XpKZ9bhzQKW8oWppTL0PLtkc+VjBV8wNZ9B2siHtJYvnqfGx+N1JpvHB0vrJ3Zf7LbS89mXqrc1tVXJlP7vcf0/aYcGZ5NlVtF62eYew37XM0sU03TYurnrF/ceifOFWqPr2G25+zCdro+Up4eHZDL562HKQIsTfLuQIriVhpYovuTz/7zb8r6v6ZRZqenDX5PJJGFrjYKtf6f/9nyH5AlY0L9+msHq8OPBlwp9kDdhsDw65fXl6Xp9VlRVRCXyZKyKrSn/92n/nP3iXg3W2ACqGDuSKgMszXBVbE07g5U69/iN7b6gellPNVOlwPr2PGmwNeUf7wYXk+/FYLXG2MKgajhA1b79SD6yHw22dLi6+Ok7lu5jg1WVas/ffmQfBc9T+PHj26QFF/v2MVBysej76Am/ClQWUyX25qpNKVmbLQFXdZGAUEQl30fp/hVEVdtUKaoMsDhbbcOl9Pybr+lKR4N1z6LqyKFqmSqNKgbWo5ls0zZcteSadp8tju0uoJra/d/EhOoj2z7SVO7kcdZg628QrvPx+OZhscb2ZUQV1+rGgWGPFVPfRbLgonGeWHuqyDUXR/b4MlqurwTVEYKqMlW/GsfQLThQ37Xk6sfG+Y4Wr1jPFtfr0S9+kUDVm12pN1XVx8f2sYbpu5m4/9g6CNFiuWq/OIqur6CpbFA1/Z9wgHr73twV0lDzHxkAlzBd6ufHdldQcZNxtEBFpXrWOrW4QdXP5Lz82WJr0TJcVrg003Uc6bqb9sZ1ulVTVVA5TVVF1fJ8Tl6rS1jYanvFDwiuOhqxfhsfy7AN1ct6OoWhavo/i6niVJ2Xu+S8O+3on7zhsih6zTFSTT8ar0E6vxdpqR48obKZKkrVbrmTu3TY362GqyW5eJzreYI4RibqR7qGJKiOR9j72aDatqASpkqgpJXj5obrZIOLWCwXZLpqutajqh8GVLWi8oMqe2z5v0SYKsZQAyxmwoTh8oOrMl22SJegayqE4HG0XTcrqI5SUFkNVVuoawHQtqk6LXf61ZPGry35P1u9okVzgapL0100mPoy4nVreuoFM1QBUHFVtdw3fiNp/+xeGC47XI1qKvwnf2F0SeF1fHkb8boF1ydjRBBTrTiVVakrU6U7QBQsDtfhDEku6he3NtNlDUeYwou+LCNcnxagmr6cEZHOAuptQ2WzVBQqhtNhB/xYAnZjv+NwHSC4LH4RoUs3XueXUdhfWU4Jic71lBUqm6H6gKBacjL28E8maIcqr8gu8ccOV+UXIbomE8h41b5xOi5kX95KvVT69k2aKbudshoqWjDLCpWMKuz26A8n7r4tuQ+lmstK1+NsC9DlhdeR3vnIV3Qj9VYp9OP0jMopaqj++WGRNVtLSCH5LkTVfrncO38/8evm7sTjXhBc1DHa6Mpgugy8qls/voxR1Xj6fK3+Apmpyk5ZnZ9Vpyuljvu/cLA0QQ9NFyHZRen6GxJeEq+pPigjG52RqolaI0hVTP1tYQrwfuFQBYIlYqi46UoWdrpQ19jkq5o6HtejfwwiigZzXPoc1FM8oEAS2P39Wb7ugrqUhN/FXgRRYdMF0uXCi04dH9RLRyOr69FB4kKKjtFU93sgUnTeF8KUEuq75XIX3LWk4y0p0QWaLkh3Md+I42XKL5puxgT+CJgmo2iGy/rsR1SFlE1OiUrcCeD95APed+pi0uP29q+HpcN0QXNGhdezmy8NqDWT+F9dRtUjMMXdHqjQMUFVQ7U7vO47dzTpeaP73fLkpgt0jcI5onhZAKvmkJUR+zoijLo8fYMBAwoniiH1A3inZ48gU0qn7/a9upzEuG8aRxWy6ydMFwGNl493lIA9mIDR5dR71WFcQb00bpgChRLFtNQvyE0AeqqW6efXZV+oooEl6BKLkSdEd7nw+vXjHzdfFsLoKtGRPYS3YUM2ZXdQvS1GuhGLHTgslJLnwOhWru8ReihKUe26SqoLgiVjXa9nl6qXeMF8MfvlAVhFmPCS06a2ZTnSA4FsysX40XIbXjxRt0cDUxBSsJniTCnvF/GekguM034n81OXmGt04KXk/fNk4ovYg4UlJnePrKrJ9MZYoii9TC3/8OD2d5qQ+o28ojNIoeuCqr+iug5Y3Ki+LhVePzHjVeEFxSVqfe9pwBRjCrKpdaJePdGjNGnT60BE5ZLw1hb2FUx/ed7jN0RISaRgM1UzVcnj1+hQXRSshqp3GS9mvnC+mAX7J4QwjbIHmKG12V5om3Zt7NuNC4KwPYTBpIDCX8MtOOeTGn2pHMvuYo8+uYLZr4TXTppcVHl5uEddg4URVnPGQHuYBhisaYd/MaS34iiYJMUTAwoliiJFEh+mzrvDcn/Zh55cTVXslgelvJx4CfvlOOOl+sBvjtjzpE+radOA05vTz5lNXqoTQ6aCqnD6kTlfNAdRHKmDeLlPu/0VHvf1wGK2i8ZTT2dP58gOLHUbMOUmGWPP/RhDyLO36L/1LHD64b5tJqQWiQMpZaYOp+VVmPoEsOpZo4qXLB3Svhb4s8zvBLRMQfZtMpT2TcD0y+semYnCbZSJFB3v6zH1aWDVEdXln3PtHT34YotDfiasPi/0VyX5qea/Lc5Yh75xlvzfGA+gTKRotsDuM57uJ4LV0l6SL78DwTlhQUef8gPafkh7dinHafFuz4ojJpmC+s14mrl5ElEEhdTy8DlI3QpYSnwdDudQ+yVlWDBiJmy/f//+Ido31Z5F8wOHtfrL8nLVlbOOXcuYgvLiqUHU63L5+mf/yU/0RsAy1NfrWZP33oAxxChj266MfXicvm1tUX9sy3Dy44l5Pc3tLS8V7hw6WDVflTLYNQyYN2A1ZMySRcUsfqMsMZg8jZOuo5b6C3kjRN0yWBpgB23/9jLIRdow22afDxrrAkUpwDBpPHGg1KDsDp+qpAYKlmHBlucIhEnQKGkctW10d9Z2o1vB0SIYpIaBWmpDcLoxEzVEsGqFX5n802FvIPYz2E3Cdq1qj48cOdW2Tom11T/Ovk8vRPp3SCgozSTtDtUbttvt9zf/sIYElmbBXpnIf903rVgsxj6xfZc4vdY398rvd7cfzjMaJFjmNPKwNHP+l8sasu+DgUnQpHt8rjGXQ8LpbsBqMHZaNms1KcpuzZZxlDhLZp93J/quDBOnewRL12JCjBmvv8YZA41btKvQxn/opwKp1a/9YXmi4mm/39/LQ7hHsNqCX7TT0v6hpcGbQk41D2pUU9cQ13y1/+JJ/uZuEFI8vP0/inM1QBD2xxwAAAAASUVORK5CYII=" alt="Maupu" class="brand-logo">
+        </div>
+        <div class="brand-text">
+          <h1>Non-Conformités</h1>
+          <span>Bennes MAUPU SAS</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="conn-badge online" id="conn-badge">🟢 En ligne</span>
+        <span class="role-badge" id="role-badge" style="display:none;"></span>
+        <button class="icon-btn" title="Exporter en Excel" onclick="exportExcel()">⬇️</button>
+        <button class="icon-btn" id="logout-btn" title="Se déconnecter" onclick="doLogout()" style="display:none;">⎋</button>
+        <button class="icon-btn" title="À propos">ⓘ</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-type="interne" onclick="setActiveType('interne')">Internes</div>
+      <div class="tab" data-type="externe" onclick="setActiveType('externe')">Externes</div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Rechercher (référence, produit, client...)" oninput="renderList()">
+      </div>
+      <button class="date-filter-btn" id="date-filter-toggle" onclick="toggleDateFilterPanel()" title="Filtrer par date">📅</button>
+    </div>
+    <div class="date-filter-panel" id="date-filter-panel" style="display:none;">
+      <div class="field-row">
+        <div class="field">
+          <label>Du</label>
+          <input type="date" id="filter-date-from" onchange="renderList()">
+        </div>
+        <div class="field">
+          <label>Au</label>
+          <input type="date" id="filter-date-to" onchange="renderList()">
+        </div>
+      </div>
+      <button type="button" class="date-filter-reset" onclick="resetDateFilter()">Réinitialiser</button>
+    </div>
+  </div>
+  <div class="chips" id="status-chips"></div>
+
+  <div class="list" id="nc-list"></div>
+</div>
+
+<!-- ============ ECRAN FICHE ============ -->
+<div id="screen-fiche" class="screen">
+  <div class="sub-header">
+    <button class="back-btn" onclick="goBack('screen-list')">←</button>
+    <div>
+      <h2 id="fiche-ref">NC-0000</h2>
+      <span class="sub-ref" id="fiche-trace">Créée le --</span>
+    </div>
+  </div>
+
+  <div class="fiche-body" id="fiche-body"></div>
+
+  <footer class="actions">
+    <button class="btn btn-ghost" id="btn-supprimer" onclick="deleteCurrent()">Supprimer</button>
+    <button class="btn btn-close" id="btn-cloturer" onclick="cloturerFiche()" style="display:none;" disabled>Clôturer</button>
+    <button class="btn btn-primary" id="btn-enregistrer" onclick="saveFiche()">Enregistrer</button>
+    <button class="btn btn-secondary" id="btn-locked-notice" disabled style="display:none;">🔒 Fiche clôturée</button>
+  </footer>
+</div>
+
+<!-- ============ ECRAN CREATION ============ -->
+<div id="screen-create" class="screen">
+  <div class="sub-header">
+    <button class="back-btn" onclick="goBack('screen-list')">←</button>
+    <h2>Nouvelle non-conformité</h2>
+  </div>
+
+  <div class="form-body">
+    <div class="section">
+      <h3>Type de non-conformité</h3>
+      <div class="type-toggle">
+        <button id="type-btn-interne" class="active" onclick="setCreateType('interne')">Interne</button>
+        <button id="type-btn-externe" onclick="setCreateType('externe')">Externe</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Détection</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Date de détection</label>
+          <input type="date" id="c-date">
+        </div>
+        <div class="field">
+          <label>Gravité</label>
+          <select id="c-gravite">
+            <option value="mineure">Mineure</option>
+            <option value="majeure" selected>Majeure</option>
+            <option value="critique">Critique</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Référence / produit concerné</label>
+        <input type="text" id="c-reference" placeholder="Ex : Benne 9132 EVO 40, n° série...">
+      </div>
+      <div class="field">
+        <label>Description du problème constaté</label>
+        <textarea id="c-description" placeholder="Décrire l'anomalie observée..."></textarea>
+      </div>
+    </div>
+
+    <div class="section interne-only" id="section-interne">
+      <h3>Origine interne</h3>
+      <div class="field">
+        <label>Service / atelier concerné</label>
+        <select id="c-service">
+          <option value="">Sélectionner...</option>
+          <option>Production</option>
+          <option>Soudure</option>
+          <option>Peinture</option>
+          <option>Contrôle qualité</option>
+          <option>Logistique / Expédition</option>
+          <option>Bureau d'études</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fiche atelier</label>
+        <input type="text" id="c-fiche-atelier" placeholder="Ex : FA-2026-0143">
+      </div>
+      <div class="field">
+        <label>Fournisseur (optionnel)</label>
+        <input type="text" id="c-fournisseur-interne" placeholder="Nom du fournisseur, si applicable">
+      </div>
+    </div>
+
+    <div class="section externe-only" id="section-externe" style="display:none;">
+      <h3>Origine externe</h3>
+      <div class="field">
+        <label>Client concerné</label>
+        <input type="text" id="c-client" placeholder="Nom du client">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>N° commande / BL</label>
+          <input type="text" id="c-commande" placeholder="Ex : CDE-2026-045">
+        </div>
+        <div class="field">
+          <label>Contact client (optionnel)</label>
+          <input type="text" id="c-contact" placeholder="Tél. ou email">
+        </div>
+      </div>
+      <div class="field">
+        <label>Fournisseur (optionnel)</label>
+        <input type="text" id="c-fournisseur-externe" placeholder="Nom du fournisseur, si applicable">
+      </div>
+    </div>
+
+    <div class="section" id="create-photo-section">
+      <h3>Photos / vidéos / preuves</h3>
+      <div class="photo-grid" id="create-photo-grid"></div>
+      <label class="photo-upload-btn" id="create-photo-upload-label">
+        📷🎥 Ajouter une photo ou vidéo
+        <input type="file" accept="image/*,video/*" id="c-photo-input" style="display:none" onchange="handleCreatePhotoSelect(this)">
+      </label>
+      <div class="photo-hint" id="create-photo-hint">Vidéos limitées à 50 Mo. D'autres photos/vidéos pourront aussi être ajoutées plus tard depuis la fiche.</div>
+    </div>
+
+    <div class="section" id="section-observe">
+      <h3>Observé par</h3>
+      <div class="field">
+        <label>Qui a observé</label>
+        <input type="text" id="c-observe-qui" placeholder="Nom de la personne">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date d'observation</label>
+          <input type="date" id="c-observe-date">
+        </div>
+        <div class="field">
+          <label>Où (poste / lieu)</label>
+          <input type="text" id="c-observe-poste" placeholder="Ex : Poste soudure 3, chez le client...">
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="section-cout">
+      <h3>Coût</h3>
+      <div class="field">
+        <label>Coût estimé (€)</label>
+        <input type="text" inputmode="decimal" id="c-cout" placeholder="Ex : 250">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Responsable du traitement</h3>
+      <div class="field">
+        <label>Nom du responsable</label>
+        <input type="text" id="c-responsable" placeholder="Personne en charge du dossier">
+      </div>
+    </div>
+  </div>
+
+  <footer class="actions">
+    <button class="btn btn-secondary" onclick="goBack('screen-list')">Annuler</button>
+    <button class="btn btn-primary" onclick="createNC()">Créer la fiche</button>
+  </footer>
+</div>
+
+<!-- Bouton "+" en dehors des écrans (flex + position:fixed est bogué sur certains
+     navigateurs Android : le bouton reste coincé dans le flux au lieu de flotter). -->
+<button class="fab hidden" id="global-fab" onclick="openCreate()">+</button>
+
+<script>
+/* ===================== DONNEES D'EXEMPLE (prototype front only) ===================== */
+/* Utilisées uniquement tant que Supabase n'est pas configuré, ou comme cache
+   initial en attendant la première synchronisation. */
+let data = [
+  {
+    id:1, num:"NC-0001", type:"interne", statut:"ouverte", gravite:"critique",
+    date:"2026-08-20", reference:"Benne 9132 EVO 40 — châssis n°4521",
+    description:"Défaut de soudure détecté sur le longeron droit lors du contrôle final avant peinture. Cordon incomplet sur environ 15cm.",
+    service:"Soudure", ficheAtelier:"FA-2026-0118", observeQui:"L. Bernard", observeDate:"2026-08-19", observePoste:"Poste soudure 3", coutEstime:"850",
+    cause:"Réglage poste à souder non conforme suite à changement de bobine de fil.",
+    actionImmediate:"Reprise de la soudure sous contrôle qualité, benne bloquée avant expédition.",
+    actionDefinitive:"Ajout d'un point de contrôle qualité systématique après changement de consommable.",
+    responsable:"S. Martin", createdBy:"J. Fontaine", createdAt:"2026-08-20 09:14", clotureAt:null
+  },
+  {
+    id:2, num:"NC-0002", type:"externe", statut:"encours", gravite:"majeure", sousStatut:"Attente Expertise Fournisseur",
+    date:"2026-08-18", reference:"Remorque agricole — Réf. RA-220",
+    description:"Le client signale un jeu anormal sur le vérin de bâchage à la livraison.",
+    client:"EARL des Tilleuls", commande:"CDE-2026-0312", contact:"03 44 xx xx xx",
+    observeQui:"Client — M. Dubois", observeDate:"2026-08-17", observePoste:"Chez le client — EARL des Tilleuls", coutEstime:"600",
+    cause:"En cours d'investigation avec le fournisseur du vérin.",
+    actionImmediate:"Envoi d'un technicien SAV sur site pour diagnostic.",
+    actionDefinitive:"",
+    responsable:"P. Lefebvre", createdBy:"J. Fontaine", createdAt:"2026-08-18 14:02", clotureAt:null
+  },
+  {
+    id:3, num:"NC-0003", type:"interne", statut:"cloturee", gravite:"mineure",
+    date:"2026-08-10", reference:"Kit éclairage LED — Réf. KE-118",
+    description:"Étiquette de traçabilité manquante sur 3 kits du lot L2308.",
+    service:"Logistique / Expédition", ficheAtelier:"FA-2026-0097", observeQui:"T. Caron", observeDate:"2026-08-10", observePoste:"Ligne de conditionnement", coutEstime:"45",
+    cause:"Rupture de stock d'étiquettes sur la ligne de conditionnement.",
+    actionImmediate:"Ré-étiquetage manuel des 3 kits identifiés avant expédition.",
+    actionDefinitive:"Stock de sécurité d'étiquettes ajouté sur la ligne.",
+    responsable:"S. Martin", createdBy:"J. Fontaine", createdAt:"2026-08-10 08:40", clotureAt:"2026-08-11 16:20"
+  },
+  {
+    id:4, num:"NC-0004", type:"externe", statut:"ouverte", gravite:"majeure",
+    date:"2026-08-25", reference:"Benne céréalière — Réf. BC-340",
+    description:"Fuite hydraulique constatée par le client dès la première utilisation du vérin de benne.",
+    client:"Transports Roussel", commande:"CDE-2026-0355", contact:"contact@transports-roussel.fr",
+    observeQui:"", observeDate:"", observePoste:"", coutEstime:"",
+    cause:"", actionImmediate:"", actionDefinitive:"",
+    responsable:"", createdBy:"J. Fontaine", createdAt:"2026-08-25 11:30", clotureAt:null
+  },
+  {
+    id:5, num:"NC-0005", type:"interne", statut:"encours", gravite:"mineure",
+    date:"2026-08-22", reference:"Peinture châssis — Réf. série CH-88",
+    description:"Coulures de peinture visibles sur la face intérieure du châssis.",
+    service:"Peinture", ficheAtelier:"FA-2026-0126", observeQui:"S. Martin", observeDate:"2026-08-22", observePoste:"Cabine peinture 2", coutEstime:"120",
+    cause:"Pression du pistolet mal réglée.",
+    actionImmediate:"Ponçage et reprise de la zone concernée.",
+    actionDefinitive:"",
+    responsable:"S. Martin", createdBy:"J. Fontaine", createdAt:"2026-08-22 10:05", clotureAt:null
+  },
+  {
+    id:6, num:"NC-0006", type:"externe", statut:"cloturee", gravite:"critique", sousStatut:"Avoir reçu",
+    date:"2026-07-30", reference:"Semi-remorque benne — Réf. SR-500",
+    description:"Rupture d'une attache de bâche en cours de transport signalée par le client.",
+    client:"Agri-Négoce Picardie", commande:"CDE-2026-0288", contact:"05 62 xx xx xx",
+    observeQui:"Transporteur routier", observeDate:"2026-07-29", observePoste:"En cours de transport", coutEstime:"1200",
+    cause:"Attache d'un lot fournisseur présentant un défaut de matière.",
+    actionImmediate:"Remplacement de toutes les attaches du véhicule sur site.",
+    actionDefinitive:"Fournisseur notifié, lot bloqué, contrôle renforcé à réception sur ce composant.",
+    responsable:"P. Lefebvre", createdBy:"J. Fontaine", createdAt:"2026-07-30 09:00", clotureAt:"2026-08-05 17:45"
+  }
+];
+
+/* ===================== CONFIGURATION SUPABASE ===================== */
+// Remplacer les deux valeurs ci-dessous par l'URL et la clé "anon" de votre
+// projet Supabase (Project Settings > API). Tant qu'elles ne sont pas
+// renseignées, l'application continue de fonctionner en mode 100% local.
+const SUPABASE_URL = "https://dznsrvkzfnkdtdbvxepv.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6bnNydmt6Zm5rZHRkYnZ4ZXB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NDY0MDQsImV4cCI6MjEwMzUyMjQwNH0.IZUm6W6dGPL24umSe56D5utIcDuc_l6FO2ZX9hpdAHs";
+const SUPABASE_TABLE = "non_conformites";
+
+const SUPABASE_CONFIGURED = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
+const sb = (SUPABASE_CONFIGURED && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+function canSync(){
+  return SUPABASE_CONFIGURED && !!sb && isOnline();
+}
+
+/* ===================== AUTHENTIFICATION & ROLES ===================== */
+// 3 rôles cumulatifs par niveau, stockés dans les metadata du compte
+// Supabase Auth ({"role":"observateur"|"responsable"|"developpeur"}) :
+//  - observateur : lecture de tout, création de fiches, ne peut modifier
+//    que la description et les photos d'une fiche existante
+//  - responsable : peut tout modifier/clôturer/supprimer, sauf sur une
+//    fiche déjà Clôturée
+//  - developpeur : accès complet, y compris sur les fiches Clôturées
+const ROLE_LEVEL = { observateur: 1, responsable: 2, developpeur: 3 };
+const ROLE_LABEL = { observateur: "Observateur", responsable: "Responsable", developpeur: "Développeur" };
+let currentUser = null;
+// Par défaut (mode local sans Supabase configuré, pas de login possible) : accès complet.
+let currentUserRole = "developpeur";
+
+function hasRoleAtLeast(minRole){
+  return (ROLE_LEVEL[currentUserRole] || 0) >= ROLE_LEVEL[minRole];
+}
+
+function applyUserBadge(){
+  const roleBadge = document.getElementById("role-badge");
+  const logoutBtn = document.getElementById("logout-btn");
+  if(!SUPABASE_CONFIGURED || !currentUser){
+    if(roleBadge) roleBadge.style.display = "none";
+    if(logoutBtn) logoutBtn.style.display = "none";
+    return;
+  }
+  if(roleBadge){
+    roleBadge.textContent = `👤 ${ROLE_LABEL[currentUserRole] || currentUserRole}`;
+    roleBadge.title = currentUser.email;
+    roleBadge.style.display = "inline-block";
+  }
+  if(logoutBtn) logoutBtn.style.display = "flex";
+}
+
+function showLoginScreen(msg){
+  const err = document.getElementById("login-error");
+  if(err){
+    err.style.display = msg ? "block" : "none";
+    err.textContent = msg || "";
+  }
+  showScreen("screen-login");
+}
+
+async function doLogin(){
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  if(!email || !password){
+    showLoginScreen("Merci de renseigner l'e-mail et le mot de passe.");
+    return;
+  }
+  const btn = document.querySelector("#screen-login .btn-primary");
+  if(btn){ btn.disabled = true; btn.textContent = "Connexion..."; }
+  try{
+    const { data: authData, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    onLoggedIn(authData.session);
+  }catch(e){
+    showLoginScreen("Identifiants incorrects ou compte inconnu.");
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "Se connecter"; }
+  }
+}
+
+async function doLogout(){
+  if(!confirm("Se déconnecter ?")) return;
+  if(sb) await sb.auth.signOut();
+  currentUser = null;
+  currentUserRole = "observateur";
+  applyUserBadge();
+  showLoginScreen();
+}
+
+function onLoggedIn(session){
+  currentUser = session.user;
+  currentUserRole = (session.user.user_metadata && session.user.user_metadata.role) || "observateur";
+  const emailEl = document.getElementById("login-email");
+  const passEl = document.getElementById("login-password");
+  if(emailEl) emailEl.value = "";
+  if(passEl) passEl.value = "";
+  applyUserBadge();
+  startApp();
+}
+
+function startApp(){
+  updateConnectionBadge();
+  renderChips();
+  renderList();
+  loadFromSupabase();
+  showScreen("screen-list");
+}
+
+/* Conversion enregistrement JS (camelCase) <-> ligne Supabase (snake_case) */
+function rowToRecord(row){
+  return {
+    id: row.id,
+    num: row.num,
+    type: row.type,
+    statut: row.statut,
+    gravite: row.gravite,
+    date: row.date_detection,
+    reference: row.reference || "",
+    description: row.description || "",
+    service: row.service || "",
+    ficheAtelier: row.fiche_atelier || "",
+    client: row.client || "",
+    commande: row.commande || "",
+    contact: row.contact || "",
+    sousStatut: row.sous_statut || "",
+    fournisseur: row.fournisseur || "",
+    observeQui: row.observe_qui || "",
+    observeDate: row.observe_date || "",
+    observePoste: row.observe_poste || "",
+    coutEstime: row.cout_estime != null ? String(row.cout_estime) : "",
+    serviceTraitement: row.service_traitement || "",
+    cause: row.cause || "",
+    actionImmediate: row.action_immediate || "",
+    actionDefinitive: row.action_definitive || "",
+    responsable: row.responsable || "",
+    createdBy: row.created_by || "",
+    createdAt: row.created_at ? row.created_at.slice(0,16).replace("T"," ") : "",
+    clotureAt: row.cloture_at ? row.cloture_at.slice(0,10) : null
+  };
+}
+
+function recordToRow(n){
+  return {
+    type: n.type,
+    statut: n.statut,
+    gravite: n.gravite,
+    date_detection: n.date || null,
+    reference: n.reference || null,
+    description: n.description || "",
+    service: n.service || null,
+    fiche_atelier: n.ficheAtelier || null,
+    client: n.client || null,
+    commande: n.commande || null,
+    contact: n.contact || null,
+    sous_statut: n.sousStatut || null,
+    fournisseur: n.fournisseur || null,
+    observe_qui: n.observeQui || null,
+    observe_date: n.observeDate || null,
+    observe_poste: n.observePoste || null,
+    cout_estime: n.coutEstime ? parseFloat(n.coutEstime) : null,
+    service_traitement: n.serviceTraitement || null,
+    cause: n.cause || null,
+    action_immediate: n.actionImmediate || null,
+    action_definitive: n.actionDefinitive || null,
+    responsable: n.responsable || null,
+    created_by: n.createdBy || null,
+    cloture_at: n.clotureAt || null
+  };
+}
+
+/* ===================== PERSISTANCE LOCALE + MODE HORS LIGNE ===================== */
+const STORAGE_KEY = "nc_maupu_data_v1";
+const DELETES_KEY = "nc_maupu_pending_deletes_v1";
+let pendingDeletes = [];
+
+(function loadPersistedData(){
+  try{
+    const rawData = localStorage.getItem(STORAGE_KEY);
+    if(rawData) data = JSON.parse(rawData);
+    const rawDeletes = localStorage.getItem(DELETES_KEY);
+    if(rawDeletes) pendingDeletes = JSON.parse(rawDeletes);
+  }catch(e){ /* localStorage indisponible ou corrompu : on garde les données d'exemple */ }
+})();
+
+function persistData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(DELETES_KEY, JSON.stringify(pendingDeletes));
+  }catch(e){ /* stockage plein ou indisponible : la session continue en mémoire uniquement */ }
+}
+
+function isOnline(){
+  return navigator.onLine;
+}
+
+function updateConnectionBadge(){
+  const badge = document.getElementById("conn-badge");
+  if(!badge) return;
+  const pendingCount = data.filter(n => n._pendingSync).length + pendingDeletes.length;
+  if(!SUPABASE_CONFIGURED){
+    badge.textContent = pendingCount ? `🟡 Local uniquement (${pendingCount} en attente)` : "🟡 Local uniquement";
+    badge.className = "conn-badge syncing";
+  } else if(!isOnline()){
+    badge.textContent = pendingCount ? `🔴 Hors ligne (${pendingCount} en attente)` : "🔴 Hors ligne";
+    badge.className = "conn-badge offline";
+  } else if(pendingCount > 0){
+    badge.textContent = `🔄 Synchronisation (${pendingCount})...`;
+    badge.className = "conn-badge syncing";
+  } else {
+    badge.textContent = "🟢 En ligne";
+    badge.className = "conn-badge online";
+  }
+}
+
+/* Charge les fiches depuis Supabase (si configuré et en ligne) et met à jour le cache local */
+async function loadFromSupabase(){
+  if(!canSync()) return;
+  try{
+    const { data: rows, error } = await sb.from(SUPABASE_TABLE).select("*").order("created_at", {ascending:false});
+    if(error) throw error;
+    const unsynced = data.filter(n => n._isNew || n._pendingSync);
+    const serverRecords = rows.map(rowToRecord);
+    data = [...serverRecords, ...unsynced];
+    persistData();
+    renderList();
+    updateConnectionBadge();
+  }catch(e){
+    /* Pas de réseau ou erreur Supabase : on continue avec le cache local */
+  }
+}
+
+/* Envoie une nouvelle fiche vers Supabase, puis remplace l'id/num local par ceux de la base */
+async function syncCreate(n){
+  const localId = n.id;
+  try{
+    const { data: inserted, error } = await sb.from(SUPABASE_TABLE).insert(recordToRow(n)).select().single();
+    if(error) throw error;
+    Object.assign(n, rowToRecord(inserted));
+    delete n._isNew;
+    delete n._pendingSync;
+    persistData();
+    renderList();
+    updateConnectionBadge();
+    if(pendingPhotoUploads[localId] && pendingPhotoUploads[localId].length){
+      const files = pendingPhotoUploads[localId];
+      delete pendingPhotoUploads[localId];
+      await uploadStagedPhotos(n.id, files);
+      if(currentFicheId === n.id) await loadPhotos(n.id);
+    }
+  }catch(e){
+    n._pendingSync = true;
+    persistData();
+    updateConnectionBadge();
+  }
+}
+
+async function syncUpdate(n){
+  try{
+    const { error } = await sb.from(SUPABASE_TABLE).update(recordToRow(n)).eq("id", n.id);
+    if(error) throw error;
+    delete n._pendingSync;
+    persistData();
+    renderList();
+    updateConnectionBadge();
+  }catch(e){
+    n._pendingSync = true;
+    persistData();
+    updateConnectionBadge();
+  }
+}
+
+async function syncDelete(id){
+  try{
+    const { error } = await sb.from(SUPABASE_TABLE).delete().eq("id", id);
+    if(error) throw error;
+  }catch(e){
+    pendingDeletes.push(id);
+    persistData();
+    updateConnectionBadge();
+  }
+}
+
+async function flushPendingQueue(){
+  if(!canSync()){ updateConnectionBadge(); return; }
+  updateConnectionBadge();
+
+  const deletesToRetry = pendingDeletes.slice();
+  pendingDeletes = [];
+  for(const id of deletesToRetry){ await syncDelete(id); }
+
+  const toCreate = data.filter(n => n._isNew);
+  const toUpdate = data.filter(n => n._pendingSync && !n._isNew);
+  for(const n of toCreate){ await syncCreate(n); }
+  for(const n of toUpdate){ await syncUpdate(n); }
+
+  const totalSynced = deletesToRetry.length + toCreate.length + toUpdate.length;
+  await loadFromSupabase();
+
+  const badge = document.getElementById("conn-badge");
+  if(badge && totalSynced > 0){
+    badge.textContent = `✅ ${totalSynced} fiche(s) synchronisée(s)`;
+    badge.className = "conn-badge online";
+    setTimeout(updateConnectionBadge, 2500);
+  }
+}
+
+window.addEventListener("online", flushPendingQueue);
+window.addEventListener("offline", updateConnectionBadge);
+
+let activeType = "interne";
+let activeStatusFilter = "toutes";
+let currentFicheId = null;
+let currentFicheLocked = false;
+let currentFichePhotos = [];
+
+const STATUT_LABEL = {ouverte:"Non-traitée", encours:"En-cours de Résolution", cloturee:"Clôturée"};
+function statutLabel(type, statut){
+  return STATUT_LABEL[statut];
+}
+const GRAVITE_LABEL = {mineure:"Mineure", majeure:"Majeure", critique:"Critique"};
+
+/* Sous-statut : réservé aux fiches Externes, dépend du Super Statut en cours. Ne génère aucun filtre. */
+const SOUS_STATUT_OPTIONS = {
+  encours: ["Attente enlèvement Pièce","Attente Expertise Fournisseur","Attente Avoir","Attente accord fournisseur","Négociation en cours"],
+  cloturee: ["Avoir reçu","Garantie Refusée"]
+};
+function sousStatutOptionsFor(statut){
+  return SOUS_STATUT_OPTIONS[statut] || [];
+}
+function renderSousStatutOptions(statut, current){
+  const opts = sousStatutOptionsFor(statut);
+  if(opts.length === 0){
+    return `<option value="">Non applicable</option>`;
+  }
+  return `<option value="">Sélectionner...</option>` + opts.map(o=>`<option ${current===o?'selected':''}>${o}</option>`).join("");
+}
+
+/* ===================== UTILS ===================== */
+function formatDateFr(iso){
+  if(!iso) return "--";
+  const [y,m,d] = iso.split(" ")[0].split("-");
+  const mois=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+  return `${parseInt(d)} ${mois[parseInt(m)-1]} ${y}`;
+}
+
+function setActiveType(type){
+  activeType = type;
+  activeStatusFilter = "toutes";
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.type===type));
+  renderChips();
+  renderList();
+}
+
+function renderChips(){
+  const chips = ["toutes","ouverte","encours","cloturee"];
+  const labels = {toutes:"Toutes", ouverte:"Non-traitées", encours:"En-cours de Résolution", cloturee:"Clôturées"};
+  const wrap = document.getElementById("status-chips");
+  wrap.innerHTML = chips.map(c=>
+    `<div class="chip ${activeStatusFilter===c?'active':''}" onclick="setStatusFilter('${c}')">${labels[c]}</div>`
+  ).join("");
+}
+
+function setStatusFilter(c){
+  activeStatusFilter = c;
+  renderChips();
+  renderList();
+}
+
+/* ===================== LISTE ===================== */
+function toggleDateFilterPanel(){
+  const panel = document.getElementById("date-filter-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+function resetDateFilter(){
+  document.getElementById("filter-date-from").value = "";
+  document.getElementById("filter-date-to").value = "";
+  renderList();
+}
+
+function updateDateFilterButtonState(dateFrom, dateTo){
+  const btn = document.getElementById("date-filter-toggle");
+  if(btn) btn.classList.toggle("active", !!(dateFrom || dateTo));
+}
+
+/* ===================== EXPORT EXCEL ===================== */
+function exportExcel(){
+  const items = getFilteredItems();
+  if(items.length === 0){
+    alert("Aucune fiche à exporter avec les filtres actuels.");
+    return;
+  }
+  if(typeof XLSX === "undefined"){
+    alert("La bibliothèque d'export Excel n'a pas pu se charger (vérifiez la connexion internet) et réessayez.");
+    return;
+  }
+
+  const rows = items.map(n => {
+    const row = {
+      "Numéro": n.num,
+      "Type": n.type === "interne" ? "Interne" : "Externe",
+      "Super Statut": statutLabel(n.type, n.statut),
+      "Date de détection": formatDateFr(n.date),
+      "Gravité": GRAVITE_LABEL[n.gravite],
+      "Référence / produit": n.reference || "",
+      "Description": n.description || ""
+    };
+    if(n.type === "interne"){
+      row["Service / atelier concerné"] = n.service || "";
+      row["Fiche atelier"] = n.ficheAtelier || "";
+    } else {
+      row["Client"] = n.client || "";
+      row["N° commande / BL"] = n.commande || "";
+      row["Contact client"] = n.contact || "";
+      row["Sous-statut"] = n.sousStatut || "";
+    }
+    row["Fournisseur"] = n.fournisseur || "";
+    row["Observé par"] = n.observeQui || "";
+    row["Date d'observation"] = n.observeDate ? formatDateFr(n.observeDate) : "";
+    row["Où (poste / lieu)"] = n.observePoste || "";
+    row["Coût estimé (€)"] = n.coutEstime || "";
+    row["Service concerné (traitement)"] = n.serviceTraitement || "";
+    row["Cause identifiée"] = n.cause || "";
+    row["Action corrective immédiate"] = n.actionImmediate || "";
+    row["Action corrective définitive"] = n.actionDefinitive || "";
+    row["Responsable du traitement"] = n.responsable || "";
+    row["Créée le"] = n.createdAt || "";
+    row["Créée par"] = n.createdBy || "";
+    row["Clôturée le"] = n.clotureAt ? formatDateFr(n.clotureAt) : "";
+    return row;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  const sheetName = activeType === "interne" ? "NC Internes" : "NC Externes";
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `non-conformites-${activeType}-${dateStr}.xlsx`);
+}
+
+function getFilteredItems(){
+  const q = document.getElementById("search-input").value.trim().toLowerCase();
+  const dateFrom = document.getElementById("filter-date-from").value;
+  const dateTo = document.getElementById("filter-date-to").value;
+  let items = data.filter(n => n.type === activeType);
+  if(activeStatusFilter !== "toutes") items = items.filter(n => n.statut === activeStatusFilter);
+  if(dateFrom) items = items.filter(n => n.date && n.date >= dateFrom);
+  if(dateTo) items = items.filter(n => n.date && n.date <= dateTo);
+  if(q){
+    items = items.filter(n => {
+      const hay = [n.num, n.reference, n.description, n.client, n.service, n.responsable].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  return items.slice().sort((a,b)=> (a.date < b.date ? 1 : -1));
+}
+
+function renderList(){
+  const dateFrom = document.getElementById("filter-date-from").value;
+  const dateTo = document.getElementById("filter-date-to").value;
+  updateDateFilterButtonState(dateFrom, dateTo);
+  const q = document.getElementById("search-input").value.trim();
+  const items = getFilteredItems();
+
+  const list = document.getElementById("nc-list");
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="e-icon">📋</div>Aucune non-conformité${q?" trouvée":""}.</div>`;
+    return;
+  }
+
+  const canDeleteFromList = hasRoleAtLeast("responsable");
+  list.innerHTML = items.map(n => `
+    <div class="nc-card grav-${n.gravite} statut-${n.statut} type-${n.type}" onclick="openFiche(${JSON.stringify(n.id)})">
+      <div class="nc-top">
+        <div>
+          <div class="nc-ref">${n.num}</div>
+          <div class="nc-type-tag">${n.type === 'interne' ? 'Interne' : 'Externe'}</div>
+        </div>
+        <div style="display:flex;align-items:center;">
+          <span class="badge badge-${n.statut}">${statutLabel(n.type, n.statut)}</span>
+          ${canDeleteFromList && (n.statut !== "cloturee" || currentUserRole === "developpeur") ? `
+          <button type="button" class="card-del-btn" title="Supprimer" onclick="deleteFromList(event, ${JSON.stringify(n.id)})">🗑</button>` : ""}
+        </div>
+      </div>
+      <div class="nc-desc">${n.description || "<em>Aucune description</em>"}</div>
+      <span class="grav-pill grav-${n.gravite}">${GRAVITE_LABEL[n.gravite]}</span>
+      ${n.sousStatut ? `<span class="sous-statut-pill">${n.sousStatut}</span>` : ""}
+      ${n._pendingSync ? `<span class="pending-tag">⏳ En attente</span>` : ""}
+      <div class="nc-meta">
+        <span>📅 ${formatDateFr(n.date)}</span>
+        <span>🔧 ${n.reference || "--"}</span>
+        ${n.type==='externe' ? `<span>👤 ${n.client || "--"}</span>` : `<span>🏭 ${n.service || "--"}</span>`}
+        ${n.coutEstime ? `<span>💶 ${n.coutEstime} €</span>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+
+/* ===================== NAVIGATION ===================== */
+function updateFabVisibility(activeScreenId){
+  const fab = document.getElementById("global-fab");
+  if(fab) fab.classList.toggle("hidden", activeScreenId !== "screen-list");
+}
+
+function goBack(screenId){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active","fade"));
+  document.getElementById(screenId).classList.add("active","fade");
+  updateFabVisibility(screenId);
+  if(screenId === "screen-list") renderList();
+}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active","fade"));
+  const el = document.getElementById(id);
+  el.classList.add("active","fade");
+  updateFabVisibility(id);
+}
+
+/* ===================== FICHE DETAIL ===================== */
+function openFiche(id){
+  currentFicheId = id;
+  const n = data.find(x=>x.id===id);
+  const isDeveloppeur = currentUserRole === "developpeur";
+  const isResponsableOrAbove = hasRoleAtLeast("responsable");
+  const isLocked = n.statut === "cloturee" && !isDeveloppeur;
+  const isNumericId = typeof n.id === "number";
+  currentFicheLocked = isLocked;
+  document.getElementById("fiche-ref").textContent = n.num;
+  document.getElementById("fiche-trace").textContent = `Créée le ${n.createdAt} par ${n.createdBy}`;
+
+  const specifiqueHtml = n.type === "interne" ? `
+    <div class="section">
+      <h3>Origine interne</h3>
+      <div class="field">
+        <label>Service / atelier concerné</label>
+        <select id="f-service">
+          ${["Production","Soudure","Peinture","Contrôle qualité","Logistique / Expédition","Bureau d'études","Autre"]
+            .map(s=>`<option ${n.service===s?'selected':''}>${s}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>Fiche atelier</label>
+        <input type="text" id="f-fiche-atelier" value="${n.ficheAtelier||''}">
+      </div>
+      <div class="field">
+        <label>Fournisseur (optionnel)</label>
+        <input type="text" id="f-fournisseur" value="${n.fournisseur||''}">
+      </div>
+    </div>` : `
+    <div class="section">
+      <h3>Origine externe</h3>
+      <div class="field">
+        <label>Client concerné</label>
+        <input type="text" id="f-client" value="${n.client||''}">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>N° commande / BL</label>
+          <input type="text" id="f-commande" value="${n.commande||''}">
+        </div>
+        <div class="field">
+          <label>Contact client</label>
+          <input type="text" id="f-contact" value="${n.contact||''}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Fournisseur (optionnel)</label>
+        <input type="text" id="f-fournisseur" value="${n.fournisseur||''}">
+      </div>
+    </div>`;
+
+  const observeHtml = `
+    <div class="section">
+      <h3>Observé par</h3>
+      <div class="field">
+        <label>Qui a observé</label>
+        <input type="text" id="f-observe-qui" value="${n.observeQui||''}">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date d'observation</label>
+          <input type="date" id="f-observe-date" value="${n.observeDate||''}">
+        </div>
+        <div class="field">
+          <label>Où (poste / lieu)</label>
+          <input type="text" id="f-observe-poste" value="${n.observePoste||''}">
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <h3>Coût</h3>
+      <div class="field">
+        <label>Coût estimé (€)</label>
+        <input type="text" inputmode="decimal" id="f-cout" value="${n.coutEstime||''}">
+      </div>
+    </div>`;
+
+  document.getElementById("fiche-body").innerHTML = `
+    ${isLocked ? `<div class="note-banner">🔒 Fiche clôturée le ${n.clotureAt ? formatDateFr(n.clotureAt) : formatDateFr(n.date)} — modification réservée au rôle Développeur.</div>` : ""}
+    <div class="section">
+      <h3>Super Statut</h3>
+      <div class="status-row">
+        ${["ouverte","encours","cloturee"].map(s=>`
+          <button type="button" class="status-pill-btn ${n.statut===s?'active st-'+s:''}" data-statut="${s}" onclick="pickStatus(this,'${s}')">${statutLabel(n.type, s)}</button>
+        `).join("")}
+      </div>
+      ${n.type === "externe" ? `
+      <div class="field" style="margin-top:12px;">
+        <label>Sous-statut</label>
+        <select id="f-sous-statut" onchange="updateCloturerButtonState()" ${sousStatutOptionsFor(n.statut).length === 0 ? 'disabled' : ''}>
+          ${renderSousStatutOptions(n.statut, n.sousStatut)}
+        </select>
+      </div>` : ""}
+    </div>
+
+    <div class="section">
+      <h3>Détection</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Date de détection</label>
+          <input type="date" id="f-date" value="${n.date}">
+        </div>
+        <div class="field">
+          <label>Gravité</label>
+          <select id="f-gravite">
+            ${["mineure","majeure","critique"].map(g=>`<option value="${g}" ${n.gravite===g?'selected':''}>${GRAVITE_LABEL[g]}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Référence / produit concerné</label>
+        <input type="text" id="f-reference" value="${n.reference||''}">
+      </div>
+      <div class="field">
+        <label>Description du problème constaté</label>
+        <textarea id="f-description">${n.description||''}</textarea>
+      </div>
+    </div>
+
+    ${specifiqueHtml}
+
+    <div class="section">
+      <h3>Photos / vidéos / preuves</h3>
+      <div class="photo-grid" id="photo-grid"></div>
+      ${isLocked ? "" : (SUPABASE_CONFIGURED && isNumericId ? `
+      <label class="photo-upload-btn">
+        📷🎥 Ajouter une photo ou vidéo
+        <input type="file" accept="image/*,video/*" id="f-photo-input" style="display:none" onchange="handlePhotoUpload(this)">
+      </label>
+      <div class="photo-hint">Vidéos limitées à 50 Mo (quelques dizaines de secondes en qualité téléphone).</div>` : `<div class="photo-zone"><span class="p-icon">📷</span>${!SUPABASE_CONFIGURED ? "Ajout de photos/vidéos disponible une fois Supabase configuré." : "Enregistrez d'abord la fiche pour pouvoir ajouter des photos/vidéos."}</div>`)}
+    </div>
+
+    ${observeHtml}
+
+    <div class="section">
+      <h3>Traitement</h3>
+      <div class="field">
+        <label>Service concerné</label>
+        <select id="f-service-traitement">
+          <option value="">Sélectionner...</option>
+          ${["Production","Soudure","Peinture","Contrôle qualité","Logistique / Expédition","Bureau d'études","SAV","Commercial","Autre"]
+            .map(s=>`<option ${n.serviceTraitement===s?'selected':''}>${s}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>Cause identifiée</label>
+        <textarea id="f-cause">${n.cause||''}</textarea>
+      </div>
+      <div class="field">
+        <label>Action corrective immédiate</label>
+        <textarea id="f-action-immediate">${n.actionImmediate||''}</textarea>
+      </div>
+      <div class="field">
+        <label>Action corrective définitive / préventive</label>
+        <textarea id="f-action-definitive">${n.actionDefinitive||''}</textarea>
+      </div>
+      <div class="field">
+        <label>Responsable du traitement</label>
+        <input type="text" id="f-responsable" value="${n.responsable||''}">
+      </div>
+    </div>
+
+  `;
+
+  document.getElementById("btn-supprimer").style.display = (isLocked || !isResponsableOrAbove) ? "none" : "block";
+  document.getElementById("btn-enregistrer").style.display = isLocked ? "none" : "block";
+  document.getElementById("btn-locked-notice").style.display = isLocked ? "block" : "none";
+
+  const btnCloturer = document.getElementById("btn-cloturer");
+  btnCloturer.style.display = (isLocked || !isResponsableOrAbove) ? "none" : "block";
+  updateCloturerButtonState();
+
+  if(isLocked){
+    document.querySelectorAll("#fiche-body input, #fiche-body select, #fiche-body textarea, #fiche-body .status-pill-btn")
+      .forEach(el => el.disabled = true);
+  } else if(!isResponsableOrAbove){
+    document.querySelectorAll("#fiche-body input, #fiche-body select, #fiche-body textarea, #fiche-body .status-pill-btn")
+      .forEach(el => { if(el.id !== "f-description" && el.id !== "f-photo-input") el.disabled = true; });
+  }
+
+  loadPhotos(isNumericId ? n.id : null);
+
+  showScreen("screen-fiche");
+}
+
+/* ===================== PHOTOS ===================== */
+async function loadPhotos(ncId){
+  const grid = document.getElementById("photo-grid");
+  if(!grid) return;
+  if(!canSync() || typeof ncId !== "number"){
+    currentFichePhotos = [];
+    grid.innerHTML = "";
+    return;
+  }
+  try{
+    const { data: rows, error } = await sb.from("non_conformites_photos").select("*").eq("nc_id", ncId).order("created_at", {ascending:true});
+    if(error) throw error;
+    currentFichePhotos = rows || [];
+    renderPhotos();
+  }catch(e){
+    grid.innerHTML = `<span style="font-size:12.5px;color:var(--text-mute);">Impossible de charger les photos pour le moment.</span>`;
+  }
+}
+
+function renderPhotos(){
+  const grid = document.getElementById("photo-grid");
+  if(!grid) return;
+  const canDelete = hasRoleAtLeast("responsable") && !currentFicheLocked;
+  if(currentFichePhotos.length === 0){
+    grid.innerHTML = `<span style="font-size:12.5px;color:var(--text-mute);">Aucune photo pour l'instant.</span>`;
+    return;
+  }
+  grid.innerHTML = currentFichePhotos.map(p => {
+    const isVideo = (p.mime_type || "").startsWith("video/");
+    const media = isVideo
+      ? `<video src="${p.url}" muted playsinline onclick="window.open('${p.url.replace(/'/g,"\\'")}','_blank')"></video><span class="photo-play">▶</span>`
+      : `<img src="${p.url}" onclick="window.open('${p.url.replace(/'/g,"\\'")}','_blank')">`;
+    return `
+    <div class="photo-thumb">
+      ${media}
+      ${canDelete ? `<button type="button" class="photo-del" onclick="deletePhoto(${p.id}, '${p.path.replace(/'/g,"\\'")}')">✕</button>` : ""}
+    </div>
+  `;
+  }).join("");
+}
+
+const PHOTO_MAX_BYTES = 50 * 1024 * 1024; // 50 Mo (plafond du plan gratuit Supabase)
+
+async function handlePhotoUpload(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = "";
+  if(!file) return;
+  if(file.size > PHOTO_MAX_BYTES){
+    alert("Ce fichier dépasse 50 Mo. Réduisez la durée/qualité de la vidéo (ou de la photo) puis réessayez.");
+    return;
+  }
+  const n = data.find(x=>x.id===currentFicheId);
+  if(!n || typeof n.id !== "number" || !canSync()){
+    alert("Impossible d'ajouter une photo ou vidéo pour l'instant (fiche non synchronisée ou connexion indisponible).");
+    return;
+  }
+  const path = `nc-${n.id}/${Date.now()}-${file.name}`;
+  try{
+    const { error: upErr } = await sb.storage.from("non-conformites-photos").upload(path, file);
+    if(upErr) throw upErr;
+    const { data: pub } = sb.storage.from("non-conformites-photos").getPublicUrl(path);
+    const { error: insErr } = await sb.from("non_conformites_photos").insert({
+      nc_id: n.id, path: path, url: pub.publicUrl, mime_type: file.type || null, uploaded_by_email: currentUser ? currentUser.email : null
+    });
+    if(insErr) throw insErr;
+    await loadPhotos(n.id);
+  }catch(e){
+    alert("Échec de l'envoi. Vérifiez votre connexion et réessayez.");
+  }
+}
+
+async function deletePhoto(photoId, path){
+  if(!confirm("Supprimer cette photo ?")) return;
+  try{
+    const { error: delErr } = await sb.from("non_conformites_photos").delete().eq("id", photoId);
+    if(delErr) throw delErr;
+    await sb.storage.from("non-conformites-photos").remove([path]);
+    currentFichePhotos = currentFichePhotos.filter(p => p.id !== photoId);
+    renderPhotos();
+  }catch(e){
+    alert("Échec de la suppression de la photo.");
+  }
+}
+
+/* Photos/vidéos choisies à la création : envoyées une fois la fiche enregistrée (et son id définitif connu).
+   Si la fiche est créée hors connexion, elles restent en attente ici jusqu'à la prochaine synchronisation. */
+let pendingPhotoUploads = {}; // id local de la fiche -> [File, ...]
+
+async function uploadOnePhoto(ncId, file){
+  const path = `nc-${ncId}/${Date.now()}-${file.name}`;
+  const { error: upErr } = await sb.storage.from("non-conformites-photos").upload(path, file);
+  if(upErr) throw upErr;
+  const { data: pub } = sb.storage.from("non-conformites-photos").getPublicUrl(path);
+  const { error: insErr } = await sb.from("non_conformites_photos").insert({
+    nc_id: ncId, path: path, url: pub.publicUrl, mime_type: file.type || null,
+    uploaded_by_email: currentUser ? currentUser.email : null
+  });
+  if(insErr) throw insErr;
+}
+
+async function uploadStagedPhotos(ncId, files){
+  for(const file of files){
+    try{ await uploadOnePhoto(ncId, file); }
+    catch(e){
+      // Échec (réseau coupé entre-temps, etc.) : on les remet en attente pour un prochain essai.
+      pendingPhotoUploads[ncId] = pendingPhotoUploads[ncId] || [];
+      pendingPhotoUploads[ncId].push(file);
+    }
+  }
+}
+
+/* Bouton "Clôturer" : actif seulement si le Super Statut "Clôturée" est sélectionné (+ un sous-statut choisi, pour les Externes uniquement) */
+function updateCloturerButtonState(){
+  const btn = document.getElementById("btn-cloturer");
+  if(!btn || btn.style.display === "none") return;
+  const n = data.find(x=>x.id===currentFicheId);
+  if(!n) return;
+  const activePill = document.querySelector(".status-pill-btn.active");
+  const statut = activePill ? activePill.dataset.statut : null;
+  if(n.type === "externe"){
+    const sousEl = document.getElementById("f-sous-statut");
+    const sousVal = sousEl ? sousEl.value : "";
+    btn.disabled = !(statut === "cloturee" && sousVal);
+  } else {
+    btn.disabled = !(statut === "cloturee");
+  }
+}
+
+function cloturerFiche(){
+  if(!confirm("Clôturer définitivement cette fiche de non-conformité ?")) return;
+  saveFiche();
+}
+
+function pickStatus(btn, statut){
+  document.querySelectorAll(".status-pill-btn").forEach(b=>{
+    b.classList.remove("active","st-ouverte","st-encours","st-cloturee");
+  });
+  btn.classList.add("active", "st-"+statut);
+  btn.dataset.picked = "1";
+
+  const sousSelect = document.getElementById("f-sous-statut");
+  if(sousSelect){
+    sousSelect.innerHTML = renderSousStatutOptions(statut, null);
+    sousSelect.disabled = sousStatutOptionsFor(statut).length === 0;
+  }
+  updateCloturerButtonState();
+}
+
+function saveFiche(){
+  const n = data.find(x=>x.id===currentFicheId);
+  if(!n) return;
+
+  const pickedBtn = document.querySelector(".status-pill-btn.active");
+  n.statut = pickedBtn ? pickedBtn.dataset.statut : n.statut;
+  if(n.statut === "cloturee" && !n.clotureAt){
+    n.clotureAt = new Date().toISOString().slice(0,10);
+  }
+  if(n.statut !== "cloturee"){
+    n.clotureAt = null;
+  }
+
+  if(n.type === "externe"){
+    const sousEl = document.getElementById("f-sous-statut");
+    n.sousStatut = sousEl ? sousEl.value : "";
+  }
+
+  n.date = document.getElementById("f-date").value;
+  n.gravite = document.getElementById("f-gravite").value;
+  n.reference = document.getElementById("f-reference").value;
+  n.description = document.getElementById("f-description").value;
+  n.serviceTraitement = document.getElementById("f-service-traitement").value;
+  n.cause = document.getElementById("f-cause").value;
+  n.actionImmediate = document.getElementById("f-action-immediate").value;
+  n.actionDefinitive = document.getElementById("f-action-definitive").value;
+  n.responsable = document.getElementById("f-responsable").value;
+
+  n.observeQui = document.getElementById("f-observe-qui").value;
+  n.observeDate = document.getElementById("f-observe-date").value;
+  n.observePoste = document.getElementById("f-observe-poste").value;
+  n.coutEstime = document.getElementById("f-cout").value;
+
+  if(n.type === "interne"){
+    n.service = document.getElementById("f-service").value;
+    n.ficheAtelier = document.getElementById("f-fiche-atelier").value;
+  } else {
+    n.client = document.getElementById("f-client").value;
+    n.commande = document.getElementById("f-commande").value;
+    n.contact = document.getElementById("f-contact").value;
+  }
+  n.fournisseur = document.getElementById("f-fournisseur").value;
+
+  if(n._isNew){
+    if(canSync()){ syncCreate(n); } else { n._pendingSync = true; }
+  } else if(canSync()){
+    syncUpdate(n);
+  } else {
+    n._pendingSync = true;
+  }
+  persistData();
+  updateConnectionBadge();
+
+  goBack("screen-list");
+}
+
+function performDelete(id){
+  const n = data.find(x=>x.id===id);
+  data = data.filter(x=>x.id !== id);
+  if(n && !n._isNew){
+    if(canSync()){ syncDelete(n.id); } else { pendingDeletes.push(n.id); }
+  }
+  persistData();
+  updateConnectionBadge();
+}
+
+function deleteCurrent(){
+  if(!confirm("Supprimer cette fiche ?")) return;
+  performDelete(currentFicheId);
+  goBack("screen-list");
+}
+
+/* Suppression directe depuis une carte de la liste, sans ouvrir la fiche */
+function deleteFromList(event, id){
+  event.stopPropagation();
+  if(!hasRoleAtLeast("responsable")) return;
+  if(!confirm("Supprimer cette fiche ?")) return;
+  performDelete(id);
+  renderList();
+}
+
+/* ===================== CREATION ===================== */
+let createType = "interne";
+let createPendingPhotos = []; // {file, url, kind} choisies avant l'enregistrement de la fiche
+
+function renderCreatePhotoGrid(){
+  const grid = document.getElementById("create-photo-grid");
+  if(!grid) return;
+  if(!SUPABASE_CONFIGURED){
+    grid.innerHTML = `<span style="font-size:12.5px;color:var(--text-mute);">Ajout de photos/vidéos disponible une fois Supabase configuré.</span>`;
+    return;
+  }
+  if(createPendingPhotos.length === 0){
+    grid.innerHTML = `<span style="font-size:12.5px;color:var(--text-mute);">Aucune photo ajoutée pour l'instant.</span>`;
+    return;
+  }
+  grid.innerHTML = createPendingPhotos.map((p, idx) => {
+    const media = p.kind === "video"
+      ? `<video src="${p.url}" muted playsinline></video><span class="photo-play">▶</span>`
+      : `<img src="${p.url}">`;
+    return `
+    <div class="photo-thumb">
+      ${media}
+      <button type="button" class="photo-del" onclick="removeCreatePendingPhoto(${idx})">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function handleCreatePhotoSelect(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = "";
+  if(!file) return;
+  if(file.size > PHOTO_MAX_BYTES){
+    alert("Ce fichier dépasse 50 Mo. Réduisez la durée/qualité de la vidéo (ou de la photo) puis réessayez.");
+    return;
+  }
+  createPendingPhotos.push({
+    file: file,
+    url: URL.createObjectURL(file),
+    kind: (file.type||"").startsWith("video/") ? "video" : "image"
+  });
+  renderCreatePhotoGrid();
+}
+
+function removeCreatePendingPhoto(idx){
+  const p = createPendingPhotos[idx];
+  if(p) URL.revokeObjectURL(p.url);
+  createPendingPhotos.splice(idx, 1);
+  renderCreatePhotoGrid();
+}
+
+function setCreateType(type){
+  createType = type;
+  document.getElementById("type-btn-interne").classList.toggle("active", type==="interne");
+  document.getElementById("type-btn-externe").classList.toggle("active", type==="externe");
+  document.querySelectorAll(".interne-only").forEach(el => el.style.display = type==="interne" ? "block" : "none");
+  document.querySelectorAll(".externe-only").forEach(el => el.style.display = type==="externe" ? "block" : "none");
+}
+
+function openCreate(){
+  createType = activeType;
+  setCreateType(activeType);
+  document.getElementById("c-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("c-gravite").value = "majeure";
+  document.getElementById("c-reference").value = "";
+  document.getElementById("c-description").value = "";
+  document.getElementById("c-service").value = "";
+  document.getElementById("c-fiche-atelier").value = "";
+  document.getElementById("c-fournisseur-interne").value = "";
+  document.getElementById("c-fournisseur-externe").value = "";
+  document.getElementById("c-observe-qui").value = "";
+  document.getElementById("c-observe-date").value = "";
+  document.getElementById("c-observe-poste").value = "";
+  document.getElementById("c-cout").value = "";
+  document.getElementById("c-client").value = "";
+  document.getElementById("c-commande").value = "";
+  document.getElementById("c-contact").value = "";
+  document.getElementById("c-responsable").value = "";
+
+  createPendingPhotos.forEach(p => URL.revokeObjectURL(p.url));
+  createPendingPhotos = [];
+  const showPhotoUpload = SUPABASE_CONFIGURED;
+  document.getElementById("create-photo-upload-label").style.display = showPhotoUpload ? "" : "none";
+  document.getElementById("create-photo-hint").style.display = showPhotoUpload ? "" : "none";
+  renderCreatePhotoGrid();
+
+  showScreen("screen-create");
+}
+
+function createNC(){
+  const description = document.getElementById("c-description").value.trim();
+  if(!description){
+    alert("Merci de décrire le problème constaté avant de créer la fiche.");
+    return;
+  }
+  const now = new Date();
+  const nowStr = now.toISOString().slice(0,10) + " " + now.toTimeString().slice(0,5);
+
+  const n = {
+    id: "local-" + Date.now(),
+    num: "(en attente)",
+    _isNew: true,
+    type: createType,
+    statut: "ouverte",
+    gravite: document.getElementById("c-gravite").value,
+    date: document.getElementById("c-date").value,
+    reference: document.getElementById("c-reference").value,
+    description: description,
+    cause: "", actionImmediate: "", actionDefinitive: "",
+    responsable: document.getElementById("c-responsable").value,
+    createdBy: currentUser ? currentUser.email : "Utilisateur inconnu",
+    createdAt: nowStr,
+    clotureAt: null
+  };
+
+  n.observeQui = document.getElementById("c-observe-qui").value;
+  n.observeDate = document.getElementById("c-observe-date").value;
+  n.observePoste = document.getElementById("c-observe-poste").value;
+  n.coutEstime = document.getElementById("c-cout").value;
+
+  if(createType === "interne"){
+    n.service = document.getElementById("c-service").value;
+    n.ficheAtelier = document.getElementById("c-fiche-atelier").value;
+    n.fournisseur = document.getElementById("c-fournisseur-interne").value;
+  } else {
+    n.client = document.getElementById("c-client").value;
+    n.commande = document.getElementById("c-commande").value;
+    n.contact = document.getElementById("c-contact").value;
+    n.fournisseur = document.getElementById("c-fournisseur-externe").value;
+  }
+
+  const stagedFiles = createPendingPhotos.map(p => p.file);
+  createPendingPhotos.forEach(p => URL.revokeObjectURL(p.url));
+  createPendingPhotos = [];
+  if(stagedFiles.length){ pendingPhotoUploads[n.id] = stagedFiles; }
+
+  data.push(n);
+  if(canSync()){ syncCreate(n); } else { n._pendingSync = true; }
+  persistData();
+  updateConnectionBadge();
+
+  activeType = createType;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.type===createType));
+  activeStatusFilter = "toutes";
+  renderChips();
+  goBack("screen-list");
+}
+
+/* ===================== INIT ===================== */
+if(SUPABASE_CONFIGURED && sb){
+  sb.auth.getSession().then(({data}) => {
+    if(data && data.session){
+      onLoggedIn(data.session);
+    } else {
+      showLoginScreen();
+    }
+  });
+  sb.auth.onAuthStateChange((event, session) => {
+    if(event === "SIGNED_OUT"){
+      currentUser = null;
+      currentUserRole = "observateur";
+      applyUserBadge();
+      showLoginScreen();
+    }
+  });
+} else {
+  // Pas de Supabase configuré : pas de login possible, mode local à accès complet.
+  currentUserRole = "developpeur";
+  startApp();
+}
+</script>
+</body>
+</html>
